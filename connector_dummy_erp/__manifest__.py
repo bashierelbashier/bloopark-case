@@ -11,6 +11,7 @@
         "security/security.xml",
         "security/ir.model.access.csv",
         "views/dummy_erp_integration_views.xml",
-        "views/dummy_erp_integration_log_views.xml"
+        "views/dummy_erp_integration_log_views.xml",
+        "views/product_template_views.xml"
     ],
 }

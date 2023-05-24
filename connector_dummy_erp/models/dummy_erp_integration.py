@@ -1,7 +1,17 @@
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 
-DUMMY_JSON_PATHS = {}
+from .api_client import send_request
+
+DUMMY_JSON_PATHS = {
+    "test": "/test",
+    "get_products": "/products?limit=0",
+    "get_carts": "/carts?limit=0",
+    "get_users": "/users?limit=0",
+    "update_cart": "/carts",
+    "update_product": "/products",
+    "add_product": "/products/add"
+}
 
 
 class DummyERPIntegration(models.Model):
@@ -17,7 +27,7 @@ class DummyERPIntegration(models.Model):
 
     # Basic integration fields
     name = fields.Char("Name", required=1)
-    active = fields.Boolean("Active", default=True, tracking=True)
+    active = fields.Boolean("Active", default=False, tracking=True)
     base_url = fields.Char("Base Integration URL", default="https://dummyjson.com")
 
     # Automation fields
@@ -25,9 +35,16 @@ class DummyERPIntegration(models.Model):
     auto_import_user = fields.Boolean("Auto Import Users", default=False, tracking=True)
     auto_export_cart = fields.Boolean("Auto Export Carts", default=False, tracking=True)
     auto_export_product = fields.Boolean("Auto Export Products", default=False, tracking=True)
+    # TODO: When automation values are changed; apply changes to the relevant cron job
 
     last_export_cart = fields.Datetime("Last Import Products")
     last_export_product = fields.Datetime("Last Import Products")
+
+    # Cron IDS
+    import_product_cron_id = fields.Many2one("ir.cron")
+    import_user_cron_id = fields.Many2one("ir.cron")
+    export_cart_cron_id = fields.Many2one("ir.cron")
+    export_product_cron_id = fields.Many2one("ir.cron")
 
     # Smart buttons
     cron_ids = fields.One2many(
@@ -38,7 +55,9 @@ class DummyERPIntegration(models.Model):
 
     # Business logic fields
     pricelist_id = fields.Many2one("product.pricelist", "Pricelist", default=_default_pricelist, tracking=True)
-    company_id = fields.Many2one('res.company', string='Company', default=lambda self: self.env.company.id)
+    company_id = fields.Many2one("res.company", string="Company", default=lambda self: self.env.company.id)
+    default_tax_ids = fields.Many2many("account.tax", string="Default Taxes", domain=[('type_tax_use', '=', 'sale')],
+                                       tracking=True)
 
     ##################
     # Helper methods
@@ -49,12 +68,6 @@ class DummyERPIntegration(models.Model):
             return self.base_url[0:-1]
         else:
             return self.base_url
-
-    @api.model
-    def _get_headers(self):
-        return {
-            "content-type": "application/json"
-        }
 
     def log_operation(self, subject, details, type):
         self.env["dummy.erp.integration.log"].sudo().create(
@@ -93,7 +106,7 @@ class DummyERPIntegration(models.Model):
     @api.model
     def create(self, vals):
         res = super(DummyERPIntegration, self).create(vals)
-        res._create_dummy_erp_user_importer()
+        res._create_dummy_erp_product_importer()
         res._create_dummy_erp_user_importer()
         res._create_dummy_erp_cart_exporter()
         res._create_dummy_erp_product_exporter()
@@ -108,34 +121,42 @@ class DummyERPIntegration(models.Model):
         return res
 
     def test_connection(self):
-        headers = self._get_headers()
-        url = self._get_base_url() + "/oauth2/user/info"
-        response = requests.get(url, headers=headers)
-        if 200 <= response.status_code < 300 and response.json()["status"]:
-            message = _("Connection Test Successful!")
+        try:
+            response = send_request(self, "GET", {}, DUMMY_JSON_PATHS["test"])
+            if 200 <= response.status_code < 300 and response.json()["status"]:
+                message = _("Connection Test Successful!")
+                self.log_operation(
+                    _("Test Connection"),
+                    message,
+                    "info",
+                )
+                return {
+                    "type": "ir.actions.client",
+                    "tag": "display_notification",
+                    "params": {
+                        "message": message,
+                        "type": "success",
+                        "sticky": False,
+                    },
+                }
+            elif response.json()["status"] == "error":
+                message = response.json()["message"]["description"]
+                self.log_operation(
+                    _("Test Connection"),
+                    message,
+                    "error",
+                )
+                raise UserError(
+                    _("The server refused the test connection with error: ") + message
+                )
+        except Exception as e:
             self.log_operation(
                 _("Test Connection"),
-                message,
-                "info",
-            )
-            return {
-                "type": "ir.actions.client",
-                "tag": "display_notification",
-                "params": {
-                    "message": message,
-                    "type": "success",
-                    "sticky": False,
-                },
-            }
-        elif response.json()["status"] == "error":
-            message = response.json()["message"]["description"]
-            self.log_operation(
-                _("Test Connection"),
-                message,
+                str(e),
                 "error",
             )
             raise UserError(
-                _("The server refused the test connection with error: ") + message
+                _("An error occurred testing connection: ") + str(e)
             )
 
     def _create_dummy_erp_product_importer(self):
@@ -155,6 +176,7 @@ class DummyERPIntegration(models.Model):
                 code=f"model.import_dummy_products({self.id})",
             )
         )
+        self.import_product_cron_id = cron_id.id
         cron_id.dummy_erp_integration_id = self
 
     def _create_dummy_erp_user_importer(self):
@@ -174,6 +196,7 @@ class DummyERPIntegration(models.Model):
                 code=f"model.import_dummy_users({self.id})",
             )
         )
+        self.import_user_cron_id = cron_id.id
         cron_id.dummy_erp_integration_id = self
 
     def _create_dummy_erp_cart_exporter(self):
@@ -193,6 +216,7 @@ class DummyERPIntegration(models.Model):
                 code=f"model.export_dummy_carts({self.id})",
             )
         )
+        self.export_cart_cron_id = cron_id.id
         cron_id.dummy_erp_integration_id = self
 
     def _create_dummy_erp_product_exporter(self):
@@ -212,6 +236,7 @@ class DummyERPIntegration(models.Model):
                 code=f"model.export_dummy_products({self.id})",
             )
         )
+        self.export_product_cron_id = cron_id.id
         cron_id.dummy_erp_integration_id = self
 
     ##########################
@@ -219,12 +244,37 @@ class DummyERPIntegration(models.Model):
     ##########################
     @api.model
     def import_dummy_products(self, integration_id):
-        integration = self.search([("id", "=", integration_id)])
-        pass
+        integration = self.with_context(active_test=False).search([("id", "=", integration_id)])
+        try:
+            response = send_request(integration, "GET", {}, DUMMY_JSON_PATHS["get_products"])
+            if (
+                    200 <= response.status_code < 300
+                    and "products" in response.json()
+                    and len(response.json()["products"]) > 0
+            ):
+                payload = response.json()["products"]
+                self.env["product.template"].create_or_update_from_dummy_erp_payload(
+                    integration, payload
+                )
+                integration.log_operation(
+                    _("Import Products"),
+                    (
+                        f"Products batch imported successfully {response.json()['products']}"
+                    ),
+                    "info",
+                )
+                self.env.cr.commit()
+
+        except Exception as exc:
+            integration.log_operation(
+                _("Import Products"),
+                (f"Exception: {str(exc)}"),
+                "error",
+            )
 
     @api.model
     def import_dummy_users(self, integration_id):
-        integration = self.search([("id", "=", integration_id)])
+        integration = self.with_context(active_test=False).search([("id", "=", integration_id)])
         pass
 
     ##########################
@@ -232,10 +282,10 @@ class DummyERPIntegration(models.Model):
     ##########################
     @api.model
     def export_dummy_products(self, integration_id):
-        integration = self.search([("id", "=", integration_id)])
+        integration = self.with_context(active_test=False).search([("id", "=", integration_id)])
         pass
 
     @api.model
     def export_dummy_carts(self, integration_id):
-        integration = self.search([("id", "=", integration_id)])
+        integration = self.with_context(active_test=False).search([("id", "=", integration_id)])
         pass

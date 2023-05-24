@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Views -->
+        <record id="product_template_form_view" model="ir.ui.view">
+            <field name="name">product.template.common.form</field>
+            <field name="model">product.template</field>
+            <field name="inherit_id" ref="product.product_template_form_view"/>
+            <field name="arch" type="xml">
+                <page name="inventory" position="after">
+                    <page name="dummy_erp" string="Dummy ERP">
+                        <group name="dummy_erp">
+                            <group string="Dummy ERP">
+                                <field name="dummy_erp_id" readonly="1"/>
+                                <field name="dummy_erp_brand" readonly="1"/>
+                                <field name="dummy_erp_rating" readonly="1"/>
+                                <field name="discount_percentage" readonly="1"/>
+                            </group>
+                        </group>
+                    </page>
+                </page>
+            </field>
+        </record>
+
+    </data>
+</odoo>

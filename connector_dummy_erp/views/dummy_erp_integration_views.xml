@@ -8,6 +8,9 @@
             <field name="model">dummy.erp.integration</field>
             <field name="arch" type="xml">
                 <form string="Dummy ERP Configuration">
+                    <header>
+                        <button name="test_connection" string="TEST CONNECTION" class="oe_link" type="object"/>
+                    </header>
                     <sheet>
                         <div class="oe_button_box" name="button_box">
                             <field name="active" invisible="1"/>
@@ -38,6 +41,9 @@
                         <group string="Sale Configuration">
                             <field name="pricelist_id"
                                    options="{'no_create': True, 'no_edit': True, 'no_quick_create': True}"/>
+                            <field name="default_tax_ids"
+                                   options="{'no_create': True, 'no_edit': True, 'no_quick_create': True}"
+                                   widget="many2many_tags"/>
                         </group>
 
                         <group string="Automation Configuration" name="erp_automation">
