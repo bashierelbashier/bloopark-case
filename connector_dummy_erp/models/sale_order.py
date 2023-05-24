@@ -83,6 +83,7 @@ class SaleOrder(models.Model):
                     "partner_invoice_id": user_id.partner_id.id,
                     "dummy_erp_id": cart["id"],
                     "website_id": website_id.id,
+                    "update_to_dummy_erp": False,
                     "dummy_erp_integration_id": integration_id.id,
                     "order_line": lines,
                 })
