@@ -20,8 +20,8 @@ def get_request_url(integration, path):
     return integration._get_base_url() + path
 
 
-def send_request(integration, method, payload, path, add_headers=None):
-    """Send post request with given params
+def perform_request(integration, method, payload, path, add_headers=None):
+    """Send HTTP request with given params
 
     Args:
         integration (object): dummy.erp.integration object
@@ -38,5 +38,6 @@ def send_request(integration, method, payload, path, add_headers=None):
     request_url = get_request_url(integration, path)
     # Merge headers
     headers = {**get_headers(), **add_headers}
+
     response = requests.request(method, request_url, json=payload, headers=headers)
     return response

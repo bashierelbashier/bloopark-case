@@ -13,9 +13,11 @@
                         <group name="dummy_erp">
                             <group string="Dummy ERP">
                                 <field name="dummy_erp_id" readonly="1"/>
-                                <field name="dummy_erp_brand" readonly="1"/>
-                                <field name="dummy_erp_rating" readonly="1"/>
-                                <field name="discount_percentage" readonly="1"/>
+                                <field name="dummy_erp_brand" readonly="0"/>
+                                <field name="dummy_erp_rating" readonly="0"/>
+                                <field name="discount_percentage" readonly="0"/>
+                                <field name="dummy_erp_stock" readonly="0"/>
+                                <field name="update_to_dummy_erp" readonly="1" groups="base.group_no_one"/>
                             </group>
                         </group>
                     </page>

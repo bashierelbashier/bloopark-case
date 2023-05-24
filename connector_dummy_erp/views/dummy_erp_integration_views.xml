@@ -12,8 +12,8 @@
                         <button name="test_connection" string="TEST CONNECTION" class="oe_link" type="object"/>
                     </header>
                     <sheet>
+                        <field name="active" invisible="1"/>
                         <div class="oe_button_box" name="button_box">
-                            <field name="active" invisible="1"/>
                             <field name="cron_ids" invisible="1"/>
                             <field name="integration_log_ids" invisible="1"/>
                             <button class="oe_stat_button" name="action_view_crons" type="object"
@@ -46,7 +46,9 @@
                                    widget="many2many_tags"/>
                         </group>
 
-                        <group string="Automation Configuration" name="erp_automation">
+                        <group string="Automation Configuration"
+                               attrs="{'invisible': [('active', '=', False)]}"
+                               name="erp_automation">
                             <field name="auto_import_product" widget="boolean_toggle"/>
                             <field name="auto_import_user" widget="boolean_toggle"/>
                             <field name="auto_export_product" widget="boolean_toggle"/>
