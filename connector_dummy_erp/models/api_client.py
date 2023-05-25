@@ -2,6 +2,10 @@ import requests
 
 
 def get_headers():
+    """
+    Return default API headers
+    :return: dict: headers dictionary
+    """
     return {
         "Content-Type": "application/json",
     }

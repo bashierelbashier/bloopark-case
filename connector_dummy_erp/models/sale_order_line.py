@@ -1,9 +1,10 @@
-from odoo import models, fields, api
+from odoo import models, api
 
 
 class SaleOrderLine(models.Model):
     _inherit = ["sale.order.line"]
 
+    # Override write function to mark record as update_to_dummy_erp if a relevant field was updated
     def write(self, vals):
         dummy_erp_fields = ["product_uom_qty", "price_unit", "product_id", "discount"]
         dummy_erp_updated_fields = [vals_field for
@@ -19,6 +20,7 @@ class SaleOrderLine(models.Model):
             order_id.update_to_dummy_erp = True
         return res
 
+    # Override create function to mark record as update_to_dummy_erp in the relevant order_id
     @api.model
     def create(self, vals):
         res = super(SaleOrderLine, self).create(vals)

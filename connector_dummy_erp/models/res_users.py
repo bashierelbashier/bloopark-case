@@ -2,7 +2,6 @@ import requests
 import base64
 
 from odoo import api, fields, models, SUPERUSER_ID, _
-from odoo.exceptions import ValidationError
 
 from .api_client import perform_request
 from .dummy_erp_integration import DUMMY_JSON_PATHS
@@ -30,6 +29,12 @@ class ResUsers(models.Model):
 
     @api.model
     def create_or_update_from_dummy_erp_payload(self, integration_id, payload):
+        """
+        Create or update the users from the payload of Dummy ERP, if user exists update record if not then create it.
+        :param integration_id: dummy.erp.integration object
+        :param payload: list of dicts imported from Dummy ERP containing users values
+        :return: None
+        """
         users = self.prepare_dicts_from_dummy_erp_payload(integration_id, payload)
         for user_dict in users:
             if user_dict["id"]:
@@ -46,12 +51,19 @@ class ResUsers(models.Model):
 
     @api.model
     def prepare_dicts_from_dummy_erp_payload(self, integration_id, payload):
+        """
+        Prepare the creation dictionary from the payload imported from Dummy ERP
+        :param integration_id: dummy.erp.integration object
+        :param payload: dict with values imported from Dummy ERP
+        :return: dict containing the values to create a user in Odoo
+        """
         group_portal = self.env.ref("base.group_portal")
         user_dicts = []
         for user in payload:
             image_1920 = False
             name = user["firstName"] or "" + user["maidenName"] or "" + user["lastName"] or ""
             if "image" in user:
+                # Get image data from URL
                 image_1920 = base64.b64encode(requests.get(user["image"]).content)
             user_dicts.append({
                 "id": user["id"],
@@ -77,6 +89,7 @@ class ResUsers(models.Model):
             })
         return user_dicts
 
+    # Override log in function to import carts when user with dummy_erp_id successfully logs in
     @classmethod
     def _login(cls, db, login, password, user_agent_env):
         res = super(ResUsers, cls)._login(db, login, password, user_agent_env=user_agent_env)
@@ -89,7 +102,7 @@ class ResUsers(models.Model):
     def get_dummy_erp_user_carts(self):
         """
         Get user carts if he has any pending carts in the dummy ERP
-        :return:
+        :return: None
         """
         if self.dummy_erp_integration_id and self.dummy_erp_id:
             integration = self.dummy_erp_integration_id

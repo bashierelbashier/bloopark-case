@@ -9,6 +9,8 @@ class IrCron(models.Model):
         "dummy.erp.integration", "Dummy ERP Integration", ondelete="cascade"
     )
 
+    # Override unlink to prevent deleting cron jobs related to integration objects, it can be deleted with the cascade
+    #  operation only after the integration is deleted
     def unlink(self):
         for rec in self:
             if rec.dummy_erp_integration_id:

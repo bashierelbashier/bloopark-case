@@ -14,6 +14,7 @@ class SaleOrder(models.Model):
         domain = [('company_id', '=', company_id)]
         return self.env['website'].search(domain, limit=1)
 
+    # Integration fields
     dummy_erp_integration_id = fields.Many2one("dummy.erp.integration", ondelete="restrict")
     dummy_erp_id = fields.Integer("ID In Dummy ERP")
 
@@ -22,14 +23,24 @@ class SaleOrder(models.Model):
 
     @api.model
     def get_carts_to_update(self):
+        """
+        Get orders that need to be updated in the remote Dummy ERP
+        :return: List of dictionaries that are sent as a payload for the remote Dummy ERP
+        """
         products = self.search([("update_to_dummy_erp", "=", True)])
         return self.prepare_dummy_erp_payload(products)
 
     @api.model
     def prepare_dummy_erp_payload(self, recs):
+        """
+        Prepare the payload for exporting carts to the remote Dummy ERP
+        :param recs: record set containing orders that need to be updated
+        :return: list of dicts containing payload for carts in the Dummy ERP
+        """
         payload = []
         for rec in recs:
             lines = []
+            # Get user of the cart
             user_id = rec.partner_id.user_ids[0]
             for sol in rec.order_line:
                 if sol.product_id.dummy_erp_id:
@@ -51,6 +62,13 @@ class SaleOrder(models.Model):
 
     @api.model
     def create_from_dummy_erp_payload(self, user_id, integration_id, carts):
+        """
+        Create a sale order from the cart data imported from the remote Dummy ERP
+        :param user_id: res.users object
+        :param integration_id: dummy.erp.integration object
+        :param carts: list of dicts containing payloads imported from Dummy ERP
+        :return: None
+        """
         for cart in carts:
             if not self.search([("dummy_erp_id", "=", cart["id"])], limit=1):
                 lines = []

@@ -1,6 +1,6 @@
 from odoo import models, fields, api, _
 
-from odoo.exceptions import UserError, ValidationError
+from odoo.exceptions import ValidationError
 
 from .api_client import perform_request
 
@@ -24,6 +24,9 @@ class DummyERPIntegration(models.Model):
     _description = 'Dummy ERP Integration'
     _inherit = ['mail.thread']
 
+    """
+    Dummy ERP Integration
+    """
     # Default values computation methods
     def _default_pricelist(self):
         return self.env['product.pricelist'].search([('company_id', 'in', (False, self.env.company.id)),
@@ -64,6 +67,10 @@ class DummyERPIntegration(models.Model):
     # Helper methods
     ##################
     def _get_base_url(self):
+        """
+        Helper method to return URL after removing the trailing '/' if it exists because paths already have it.
+        :return:
+        """
         self.ensure_one()
         if self.base_url[-1] == "/":
             return self.base_url[0:-1]
@@ -71,6 +78,13 @@ class DummyERPIntegration(models.Model):
             return self.base_url
 
     def log_operation(self, subject, details, type):
+        """
+        Helper method used to create log entries for the integration object with passed parameters
+        :param subject: Main operation title
+        :param details: Long description for the log entry
+        :param type: Entry type either error, warning, or info.
+        :return: None
+        """
         self.env["dummy.erp.integration.log"].sudo().create(
             {
                 "integration_id": self.id,
@@ -113,6 +127,7 @@ class DummyERPIntegration(models.Model):
         res._create_dummy_erp_product_exporter()
         return res
 
+    # Override write to change cron active status based on integration automation fields
     def write(self, vals):
         res = super(DummyERPIntegration, self).write(vals)
         if 'auto_import_product' in vals:
@@ -125,6 +140,7 @@ class DummyERPIntegration(models.Model):
             self.export_product_cron_id.active = vals['auto_export_product']
         return res
 
+    # Override toggle active to deactivate/activate all automation fields based on integration status
     def toggle_active(self):
         res = super(DummyERPIntegration, self).toggle_active()
         self.write({
@@ -136,6 +152,12 @@ class DummyERPIntegration(models.Model):
         return res
 
     def test_connection(self):
+        """
+        Test the connection of the given integration values by sending an HTTP request to the test path defined in the
+        remote API.
+        It raises and error if it cannot connect.
+        :return: None
+        """
         try:
             response = perform_request(self, "GET", {}, DUMMY_JSON_PATHS["test"])
             if 200 <= response.status_code < 300 and response.json()["status"]:
@@ -259,6 +281,11 @@ class DummyERPIntegration(models.Model):
     ##########################
     @api.model
     def import_dummy_products(self, integration_id):
+        """
+        Import the products from the external ERP API, raise an error if something goes wrong.
+        :param integration_id: dummy.erp.integration object
+        :return: None
+        """
         integration = self.with_context(active_test=False).search([("id", "=", integration_id)])
         try:
             response = perform_request(integration, "GET", {}, DUMMY_JSON_PATHS["get_products"])
@@ -288,6 +315,11 @@ class DummyERPIntegration(models.Model):
 
     @api.model
     def import_dummy_users(self, integration_id):
+        """
+        Import the user from the external ERP API, raise an error if something goes wrong.
+        :param integration_id: dummy.erp.integration object
+        :return: None
+        """
         integration = self.with_context(active_test=False).search([("id", "=", integration_id)])
         try:
             response = perform_request(integration, "GET", {}, DUMMY_JSON_PATHS["get_users"])
@@ -320,6 +352,11 @@ class DummyERPIntegration(models.Model):
     ##########################
     @api.model
     def export_dummy_products(self, integration_id):
+        """
+        Export only the updated products to the external ERP API, raise an error if something goes wrong.
+        :param integration_id: dummy.erp.integration object
+        :return: None
+        """
         integration = self.with_context(active_test=False).search([("id", "=", integration_id)])
         products = self.env["product.template"].get_products_to_update()
         try:
@@ -356,6 +393,11 @@ class DummyERPIntegration(models.Model):
 
     @api.model
     def export_dummy_carts(self, integration_id):
+        """
+        Import only the updated carts to the external ERP API, raise an error if something goes wrong.
+        :param integration_id: dummy.erp.integration object
+        :return: None
+        """
         integration = self.with_context(active_test=False).search([("id", "=", integration_id)])
         carts = self.env["sale.order"].get_carts_to_update()
         try:
