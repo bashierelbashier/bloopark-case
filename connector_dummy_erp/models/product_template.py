@@ -17,7 +17,7 @@ class ProductTemplate(models.Model):
 
     # Integration needed fields
     dummy_erp_brand = fields.Char("Dummy ERP Brand")
-    dummy_erp_rating = fields.Float("Rating")
+    dummy_erp_rating = fields.Float("Dummy ERP Rating")
     discount_percentage = fields.Float("Discount Percentage")
     dummy_erp_stock = fields.Float("Dummy ERP Stock")
 
