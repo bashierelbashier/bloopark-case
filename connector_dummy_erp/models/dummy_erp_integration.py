@@ -117,6 +117,7 @@ class DummyERPIntegration(models.Model):
     # Technical methods
     ################################################################
 
+    # TODO: Override method for batch creation
     # Override create to create cron jobs once integration created
     @api.model
     def create(self, vals):

@@ -20,6 +20,7 @@ class SaleOrderLine(models.Model):
             order_id.update_to_dummy_erp = True
         return res
 
+    # TODO: Override method for batch creation
     # Override create function to mark record as update_to_dummy_erp in the relevant order_id
     @api.model
     def create(self, vals):
